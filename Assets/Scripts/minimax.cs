@@ -75,16 +75,7 @@ public class minimax : MonoBehaviour
 
 
 
-    public bool isGameOver()
-    {
-        if(getMoves().Capacity == 0)
-        {
-            Debug.Log("It's a draw");
-            return true;
-        }
-
-        
-    }
+    
 
     List<MNode> getMoves()
     {
