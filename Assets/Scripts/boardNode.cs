@@ -4,8 +4,16 @@ using UnityEngine;
 
 public class boardNode : MonoBehaviour
 {
-    public (int,int) b_pos;
+    protected GameObject obj;
+    protected Transform objTransform;
+    protected TextMesh text;
+    protected Renderer objRenderer;
+
+
     [SerializeField]
+    public (int,int) b_pos;
+
+
     public enum b_DesignationType
     {
         X,
@@ -17,17 +25,27 @@ public class boardNode : MonoBehaviour
 
     public Material b_CurrentMaterial;
 
-    private void Start()
-    {
-        b_pos.Item1 = (int)(1 + (transform.position.x / 3));
-        b_pos.Item2 = (int)(1 + (transform.position.z / 3));
 
-        b_CurrentMaterial = gameObject.GetComponent<Renderer>().material;
+
+    public void Init()
+    {
+        obj = gameObject;
+        objTransform = gameObject.transform;
+        objRenderer = GetComponent<MeshRenderer>();
+        text = GetComponentInChildren<TextMesh>();
+
+        b_pos.Item1 = (int)(1 + (objTransform.position.x / 3));
+        b_pos.Item2 = (int)(1 + (objTransform.position.z / 3));
+
+        b_CurrentMaterial = obj.GetComponent<Renderer>().material;
+
+        text.text = b_pos.ToString();
+
     }
 
     public void ApplyMaterial()
     {
-        gameObject.GetComponent<Renderer>().material = b_CurrentMaterial;
+        objRenderer.material = b_CurrentMaterial;
     }
 
 }

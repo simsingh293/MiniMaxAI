@@ -8,21 +8,46 @@ public class GameBoard : MonoBehaviour
     public Material X_Material;
     public Material O_Material;
     public Material None_Material;
-    public List<GameObject> nodes = new List<GameObject>();
+    public List<boardNode> boardNodes = new List<boardNode>();
+    public List<GameObject> nodeObjs = new List<GameObject>();
+
+    public List<(int, int)> nodePositions = new List<(int, int)>();
 
     Gameplay gameplay;
+    public Debugger debugger;
 
     public bool gameStarted = false;
+    public bool gameOver = false;
+    public bool gameWon = false;
+    public float resetTimer = 0;
+
+    public int p1Moves = 0;
+    public int p2Moves = 0;
+
 
     public enum PlayerType
     {
         PlayerOne,
         PlayerTwo,
-        AI
+        AI_One,
+        AI_Two
     }
 
-    public PlayerType currentPlayer = PlayerType.PlayerOne;
+    public struct Player
+    {
+        public PlayerType playerType;
+        public boardNode.b_DesignationType designationType;
+        public Material material;
+        public int moves;
+        public int next;
+    }
 
+    public PlayerType P1;
+    public PlayerType P2;
+
+    public Player currentPlayer;
+
+    public Player[] players = new Player[2];
 
     // Start is called before the first frame update
     void Start()
@@ -30,8 +55,19 @@ public class GameBoard : MonoBehaviour
         GenerateBoard();
 
         gameplay = Gameplay.singleton;
+        debugger = gameObject.AddComponent<Debugger>();
 
+        players[0].playerType = P1;
+        players[0].designationType = boardNode.b_DesignationType.X;
+        players[0].material = X_Material;
+        players[0].next = 1;
         
+        players[1].playerType = P2;
+        players[1].designationType = boardNode.b_DesignationType.O;
+        players[1].material = O_Material;
+        players[1].next = 0;
+
+        currentPlayer = players[0];
     }
 
     private void Update()
@@ -41,12 +77,47 @@ public class GameBoard : MonoBehaviour
             CheckForInteraction();
         }
 
-        if (CheckForFullBoard() && gameStarted)
+        if (Input.GetMouseButtonDown(1))
         {
-            ResetBoard();
+            RaycastHit hit;
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+
+            if (Physics.Raycast(ray, out hit, 10))
+            {
+                for (int i = 0; i < nodeObjs.Count; i++)
+                {
+                    if (hit.collider.gameObject == nodeObjs[i])
+                    {
+                        boardNode node = boardNodes[i];
+
+                        debugger.currentlySelectedDesignation = node.b_CurrentDesignation.ToString();
+                    }
+
+                }
+            }
+        }
+
+
+        gameOver = CheckForFullBoard();
+
+        if(p1Moves >= 3 || p2Moves >= 3)
+        {
+            gameWon = CheckForWin();
+        }
+
+        if (gameOver || gameWon && gameStarted)
+        {
+            resetTimer += Time.deltaTime;
+
+            if(resetTimer > 2)
+            {
+                ResetBoard();
+            }
         }
     }
 
+
+    
 
     void GenerateBoard()
     {
@@ -58,7 +129,9 @@ public class GameBoard : MonoBehaviour
             {
                 count++;
 
-                GameObject temp = Instantiate(nodePrefab, this.transform);
+                GameObject temp = Instantiate(nodePrefab);
+
+                temp.transform.parent = this.transform;
 
                 Vector3 position = Vector3.zero;
 
@@ -69,23 +142,34 @@ public class GameBoard : MonoBehaviour
 
                 temp.name = "Node " + count;
 
-                nodes.Add(temp);
+                nodeObjs.Add(temp);
+
+                boardNode node = temp.AddComponent<boardNode>();
+                node.Init();
+
+                boardNodes.Add(node);
+
+                nodePositions.Add(node.b_pos);
             }
         }
     }
 
     void ResetBoard()
     {
-        for (int i = 0; i < nodes.Count; i++)
+        for (int i = 0; i < boardNodes.Count; i++)
         {
-            nodes[i].GetComponent<boardNode>().b_CurrentDesignation = boardNode.b_DesignationType.none;
-            nodes[i].GetComponent<boardNode>().b_CurrentMaterial = None_Material;
-            nodes[i].GetComponent<boardNode>().ApplyMaterial();
+            boardNodes[i].b_CurrentDesignation = boardNode.b_DesignationType.none;
+            boardNodes[i].b_CurrentMaterial = None_Material;
+            boardNodes[i].ApplyMaterial();
         }
 
         gameStarted = false;
+        gameWon = false;
 
-        currentPlayer = PlayerType.PlayerOne;
+        currentPlayer = players[0];
+        resetTimer = 0;
+        p1Moves = 0;
+        p2Moves = 0;
     }
 
 
@@ -96,29 +180,38 @@ public class GameBoard : MonoBehaviour
 
         if (Physics.Raycast(ray, out hit, 10))
         {
-            if (hit.collider.gameObject.GetComponent<boardNode>())
+            
+            if (!gameStarted)
             {
-                if (!gameStarted)
+                gameStarted = true;
+            }
+
+            for (int i = 0; i < nodeObjs.Count; i++)
+            {
+
+                if (hit.collider.gameObject == nodeObjs[i])
                 {
-                    gameStarted = true;
-                }
+                    boardNode node = boardNodes[i];
 
+                    //Debug.Log(node.b_pos + " : " + node.b_CurrentDesignation);
+                    //Debug.Log(gameplay.CheckNodeAvailability(node));
 
-                boardNode node = hit.collider.gameObject.GetComponent<boardNode>();
-
-                //Debug.Log(node.b_pos + " : " + node.b_CurrentDesignation);
-                Debug.Log(gameplay.CheckNodeAvailability(node));
-
-                if (gameplay.CheckNodeAvailability(node))
-                {
-                    gameplay.SetNode(node, this);
+                    if (gameplay.CheckNodeAvailability(boardNodes[i]))
+                    {
+                        if(currentPlayer.next == 1)
+                        {
+                            p1Moves++;
+                        }
+                        else if(currentPlayer.next == 0)
+                        {
+                            p2Moves++;
+                        }
+                        gameplay.SetNode(boardNodes[i], currentPlayer, this);
+                    }
                 }
 
             }
-
-
         }
-
         Debug.DrawLine(ray.origin, ray.origin + (ray.direction * 10));
     }
 
@@ -128,14 +221,88 @@ public class GameBoard : MonoBehaviour
         bool result = true;
 
 
-        for (int i = 0; i < nodes.Count; i++)
+        for (int i = 0; i < boardNodes.Count; i++)
         {
-            if(nodes[i].GetComponent<boardNode>().b_CurrentDesignation == boardNode.b_DesignationType.none)
+            if(boardNodes[i].b_CurrentDesignation == boardNode.b_DesignationType.none)
             {
                 result = false;
                 break;
             }
         }
+
+
+        return result;
+    }
+
+
+    bool CheckForWin()
+    {
+        bool result = false;
+
+        List<int> tempList = new List<int>();
+
+        
+
+        // HORIZONTAL
+        for (int i = 1; i <= 3; i++)
+        {
+            for (int j = 0; j < boardNodes.Count; j++)
+            {
+                if(boardNodes[j].b_pos.Item1 == i)
+                {
+                    Debug.Log(boardNodes[j].b_pos);
+                    tempList.Add(j);
+                }
+            }
+
+            if(boardNodes[tempList[0]].b_CurrentDesignation == boardNodes[tempList[1]].b_CurrentDesignation 
+                &&
+                boardNodes[tempList[1]].b_CurrentDesignation == boardNodes[tempList[2]].b_CurrentDesignation 
+                &&
+                boardNodes[tempList[2]].b_CurrentDesignation == boardNodes[tempList[0]].b_CurrentDesignation)
+            {
+                Debug.Log(tempList[0] + " " + tempList[1] + " " + tempList[2]);
+                Debug.Log(boardNodes[tempList[0]].b_CurrentDesignation + " " + boardNodes[tempList[1]].b_CurrentDesignation + " " + boardNodes[tempList[2]].b_CurrentDesignation);
+                return true;
+            }
+            else
+            {
+                tempList.Clear();
+        }
+        
+
+        }
+
+
+        // VERTICAL
+        //for (int k = 1; k <= 3; k++)
+        //{
+        //    for (int l = 0; l < boardNodes.Count; l++)
+        //    {
+        //        if (nodePositions[l].Item2 == k)
+        //        {
+        //            tempList.Add(l);
+        //        }
+        //    }
+
+        //    if (boardNodes[tempList[0]].b_CurrentDesignation == boardNodes[tempList[1]].b_CurrentDesignation
+        //        &&
+        //        boardNodes[tempList[1]].b_CurrentDesignation == boardNodes[tempList[2]].b_CurrentDesignation
+        //        &&
+        //        boardNodes[tempList[2]].b_CurrentDesignation == boardNodes[tempList[0]].b_CurrentDesignation)
+        //    {
+        //        Debug.Log(tempList.Count);
+        //        return true;
+        //    }
+            
+
+        //    tempList.Clear();
+        //}
+
+
+        tempList.Clear();
+
+
 
 
         return result;

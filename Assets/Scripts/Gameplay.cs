@@ -5,6 +5,9 @@ using UnityEngine;
 public class Gameplay
 {
     private static Gameplay _instance;
+
+    
+
     public static Gameplay singleton 
     {
         get
@@ -43,29 +46,25 @@ public class Gameplay
     }
 
 
-    public void SetNode(boardNode node, GameBoard board)
+    public void SetNode(boardNode node, GameBoard.Player player, GameBoard board)
     {
-        if(board.currentPlayer == GameBoard.PlayerType.PlayerOne)
-        {
-            // Player 1 code
-            node.b_CurrentDesignation = boardNode.b_DesignationType.X;
-            node.b_CurrentMaterial = board.X_Material;
-            node.ApplyMaterial();
+        
 
-            board.currentPlayer = GameBoard.PlayerType.PlayerTwo;
-        }
-        else if(board.currentPlayer == GameBoard.PlayerType.PlayerTwo)
-        {
-            // player 2 code
-            node.b_CurrentDesignation = boardNode.b_DesignationType.O;
-            node.b_CurrentMaterial = board.O_Material;
-            node.ApplyMaterial();
+        node.b_CurrentDesignation = player.designationType;
+        node.b_CurrentMaterial = player.material;
+        node.ApplyMaterial();
 
-            board.currentPlayer = GameBoard.PlayerType.PlayerOne;
-        }
-        else
+        for (int i = 0; i < board.boardNodes.Count; i++)
         {
-            // AI code
+            if(board.boardNodes[i] == node)
+            {
+                board.boardNodes[i] = node;
+                break;
+            }
         }
+
+        board.currentPlayer = board.players[player.next];
+        board.debugger.lastSelectedDesignation = node.b_CurrentDesignation.ToString();
+
     }
 }

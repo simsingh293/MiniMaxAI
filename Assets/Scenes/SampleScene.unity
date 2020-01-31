@@ -337,11 +337,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b39cd2f8f498c414ebce9ac0213aeebf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  nodePrefab: {fileID: 3463613819571156019, guid: e01075135b2e2dc488d34d1006f99c10,
+  nodePrefab: {fileID: 5238482500377574242, guid: c09603e4f36f61a46a2c799ea1fec6aa,
     type: 3}
   X_Material: {fileID: 2100000, guid: 22bab3a62a2f9bd4486627b3c80102ab, type: 2}
   O_Material: {fileID: 2100000, guid: d741977741640e94ebb8cb431a62d68b, type: 2}
   None_Material: {fileID: 2100000, guid: 6681242ca05a220469381798e79879a9, type: 2}
-  nodes: []
+  nodeObjs: []
   gameStarted: 0
-  currentPlayer: 0
+  gameOver: 0
+  gameWon: 0
+  resetTimer: 0
+  p1Moves: 0
+  p2Moves: 0
+  P1: 0
+  P2: 1
